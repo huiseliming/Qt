@@ -3,13 +3,23 @@
 #include <QMenu>
 #include <QSystemTrayIcon>
 #include <QtWidgets>
+#include <private/qhooks_p.h>
 
+void (*fpQtAddObject)(QObject *) = nullptr;
+void (*fpHookAddObject)(QObject *) = [](QObject *object) {
+  if (fpQtAddObject) {
+    fpQtAddObject(object);
+  }
+};
 
 int main(int argc, char *argv[]) {
+  fpQtAddObject = (decltype(fpQtAddObject))qtHookData[QHooks::AddQObject];
+  qtHookData[QHooks::AddQObject] =
+      (decltype(qtHookData[QHooks::AddQObject]))fpHookAddObject;
+
   QApplication app(argc, argv);
 
   static QMenu *trayMenu = new QMenu();
-
   trayMenu->addAction(QIcon(), "关于", [&] {
     static QWidget *aboutWidget = nullptr;
     if (!aboutWidget) {
